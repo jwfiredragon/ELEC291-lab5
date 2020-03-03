@@ -13,6 +13,8 @@
 #define SYSCLK 72000000L
 #define BAUDRATE 115200L
 
+unsigned char overflow_count;
+
 char _c51_external_startup (void)
 {
 	// Disable Watchdog with key sequence
@@ -165,12 +167,21 @@ float Volts_at_Pin(unsigned char pin)
 	 return ((ADC_at_Pin(pin)*VDD)/0b_0011_1111_1111_1111);
 }
 
+unsigned int Get_ADC (void)
+{
+	ADBUSY = 1;
+	while (ADBUSY); // Wait for conversion to complete
+	return (ADC0);
+}
+
 void main (void)
 {
 	float v[4];
+	float half_period;
 
     waitms(500); // Give PuTTy a chance to start before sending
 	printf("\x1b[2J"); // Clear screen using ANSI escape sequence.
+	printf("\x1b[;f"); // Reset cursor position
 	
 	printf ("ADC test program\n"
 	        "File: %s\n"
@@ -185,6 +196,22 @@ void main (void)
 
 	while(1)
 	{
+		// Start tracking the reference signal
+		AMX0P=QFP32_MUX_P1_7;
+		ADBUSY=1;
+		while (ADBUSY); // Wait for conversion to complete
+		// Reset the timer
+		TL0=0; 
+		TH0=0;
+		while (Get_ADC()!=0); // Wait for the signal to be zero
+		while (Get_ADC()==0);  // Wait for the signal to be positive
+		TR0=1; // Start the timer 0
+		while (Get_ADC()!=0); // Wait for the signal to be zero again
+		TR0=0; // Stop timer 0
+		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
+		// Time from the beginning of the sine wave to its peak
+		overflow_count=65536-(half_period/2);
+
 	    // Read 14-bit value from the pins configured as analog inputs
 		v[0] = Volts_at_Pin(QFP32_MUX_P2_2);
 		v[1] = Volts_at_Pin(QFP32_MUX_P2_3);
