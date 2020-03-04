@@ -7,11 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EFM8LB1.h>
+#include "lcd.h"
+#include "global.h"
 
 // ~C51~  
-
-#define SYSCLK 72000000L
-#define BAUDRATE 115200L
 
 unsigned char overflow_count;
 
@@ -95,34 +94,6 @@ void InitADC (void)
 	ADEN=1; // Enable ADC
 }
 
-// Uses Timer3 to delay <us> micro-seconds. 
-void Timer3us(unsigned char us)
-{
-	unsigned char i;               // usec counter
-	
-	// The input for Timer 3 is selected as SYSCLK by setting T3ML (bit 6) of CKCON0:
-	CKCON0|=0b_0100_0000;
-	
-	TMR3RL = (-(SYSCLK)/1000000L); // Set Timer3 to overflow in 1us.
-	TMR3 = TMR3RL;                 // Initialize Timer3 for first overflow
-	
-	TMR3CN0 = 0x04;                 // Sart Timer3 and clear overflow flag
-	for (i = 0; i < us; i++)       // Count <us> overflows
-	{
-		while (!(TMR3CN0 & 0x80));  // Wait for overflow
-		TMR3CN0 &= ~(0x80);         // Clear overflow indicator
-	}
-	TMR3CN0 = 0 ;                   // Stop Timer3 and clear overflow flag
-}
-
-void waitms (unsigned int ms)
-{
-	unsigned int j;
-	unsigned char k;
-	for(j=0; j<ms; j++)
-		for (k=0; k<4; k++) Timer3us(250);
-}
-
 #define VDD 3.3035 // The measured value of VDD in volts
 
 void InitPinADC (unsigned char portno, unsigned char pinno)
@@ -196,11 +167,11 @@ void main (void)
 
 	while(1)
 	{
-	/*	// Start tracking the reference signal
-		AMX0P=QFP32_MUX_P1_7;
+		// Start tracking the reference signal
+		//AMX0P=QFP32_MUX_P1_7;
 		ADBUSY=1;
 		while (ADBUSY); // Wait for conversion to complete
-		// Reset the timer
+		//Reset the timer
 		TL0=0; 
 		TH0=0;
 		while (Get_ADC()!=0); // Wait for the signal to be zero
@@ -209,8 +180,8 @@ void main (void)
 		while (Get_ADC()!=0); // Wait for the signal to be zero again
 		TR0=0; // Stop timer 0
 		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
-		// Time from the beginning of the sine wave to its peak
-		overflow_count=65536-(half_period/2);*/
+		//Time from the beginning of the sine wave to its peak
+		overflow_count=65536-(half_period/2);
 
 	    // Read 14-bit value from the pins configured as analog inputs
 		v[0] = Volts_at_Pin(QFP32_MUX_P1_4);
