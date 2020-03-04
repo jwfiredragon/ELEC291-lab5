@@ -180,20 +180,32 @@ void main (void)
 		// Reset the timer
 		TL0=0; 
 		TH0=0;
-		while (Get_ADC()!=0); // Wait for the signal to be zero
-		while (Get_ADC()==0);  // Wait for the signal to be positive
+		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for the signal to be zero
+		while (ADC_at_Pin(PIN_SIG1)==0);  // Wait for the signal to be positive
 		TR0=1; // Start the timer 0
-		while (Get_ADC()!=0); // Wait for the signal to be zero again
+		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for the signal to be zero again
 		TR0=0; // Stop timer 0
 		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
 
 		// Time from the beginning of the sine wave to its peak
 		overflow_count=65536-(half_period/2);
 
-		// Calculate voltages and phase diff somehow
-		peak_sig1 = 0.0;
-		peak_sig2 = 0.0;
+		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for next zero
+		while (TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
+		ADC_at_Pin(PIN_SIG1);
+		peak_sig1 = Volts_at_Pin(PIN_SIG1); // record peak voltage for reference
+
+		while (ADC_at_Pin(PIN_SIG2)!=0); // Wait for zero of second signal
+		while (TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
+		ADC_at_Pin(PIN_SIG2);
+		peak_sig2 = Volts_at_Pin(PIN_SIG2); // record peak voltage for second signal
+		
+		// Measure time difference somehow? IDK
 		sig_diff = 0.0;
+
+		peak_sig1 *= 0.7071; // Convert to RMS
+		peak_sig2 *= 0.7071;
+		sig_diff = (360*sig_diff)/(2*half_period); // calculate phase shift in degrees
 
 		// Display values in PuTTY
 		printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
