@@ -188,15 +188,15 @@ void main (void)
 	        "Compiled: %s, %s\n\n",
 	        __FILE__, __DATE__, __TIME__);
 	
-	InitPinADC(2, 2); // Configure P2.2 as analog input
-	InitPinADC(2, 3); // Configure P2.3 as analog input
-	InitPinADC(2, 4); // Configure P2.4 as analog input
-	InitPinADC(2, 5); // Configure P2.5 as analog input
+	InitPinADC(1, 4); // Configure P1.4 as analog input
+	InitPinADC(1, 5); // Configure P1.5 as analog input
+	InitPinADC(1, 6); // Configure P1.6 as analog input
+	InitPinADC(1, 7); // Configure P1.7 as analog input
     InitADC();
 
 	while(1)
 	{
-		// Start tracking the reference signal
+	/*	// Start tracking the reference signal
 		AMX0P=QFP32_MUX_P1_7;
 		ADBUSY=1;
 		while (ADBUSY); // Wait for conversion to complete
@@ -210,14 +210,14 @@ void main (void)
 		TR0=0; // Stop timer 0
 		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
 		// Time from the beginning of the sine wave to its peak
-		overflow_count=65536-(half_period/2);
+		overflow_count=65536-(half_period/2);*/
 
 	    // Read 14-bit value from the pins configured as analog inputs
-		v[0] = Volts_at_Pin(QFP32_MUX_P2_2);
-		v[1] = Volts_at_Pin(QFP32_MUX_P2_3);
-		v[2] = Volts_at_Pin(QFP32_MUX_P2_4);
-		v[3] = Volts_at_Pin(QFP32_MUX_P2_5);
-		printf ("V@P2.2=%7.5fV, V@P2.3=%7.5fV, V@P2.4=%7.5fV, V@P2.5=%7.5fV\r", v[0], v[1], v[2], v[3]);
+		v[0] = Volts_at_Pin(QFP32_MUX_P1_4);
+		v[1] = Volts_at_Pin(QFP32_MUX_P1_5);
+		v[2] = Volts_at_Pin(QFP32_MUX_P1_6);
+		v[3] = Volts_at_Pin(QFP32_MUX_P1_7);
+		printf ("V@P1.4=%7.5fV, V@P1.5=%7.5fV, V@P1.6=%7.5fV, V@P1.7=%7.5fV\r", v[0], v[1], v[2], v[3]);
 		waitms(500);
 	 }  
 }	
