@@ -168,7 +168,7 @@ void main (void)
 	while(1)
 	{
 		// Start tracking the reference signal
-		//AMX0P=QFP32_MUX_P1_7;
+		ADC0MX=QFP32_MUX_P1_7;
 		ADBUSY=1;
 		while (ADBUSY); // Wait for conversion to complete
 		//Reset the timer
