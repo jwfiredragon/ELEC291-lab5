@@ -14,6 +14,9 @@
 
 unsigned char overflow_count;
 
+#define PIN_SIG1 QFP32_MUX_P1_4
+#define PIN_SIG2 QFP32_MUX_P1_5
+
 char _c51_external_startup (void)
 {
 	// Disable Watchdog with key sequence
@@ -147,8 +150,11 @@ unsigned int Get_ADC (void)
 
 void main (void)
 {
-	float v[4];
 	float half_period;
+	float peak_sig1;
+	float peak_sig2;
+	float sig_diff;
+	char display_text[17];
 
     waitms(500); // Give PuTTy a chance to start before sending
 	printf("\x1b[2J"); // Clear screen using ANSI escape sequence.
@@ -171,7 +177,7 @@ void main (void)
 		ADC0MX=QFP32_MUX_P1_7;
 		ADBUSY=1;
 		while (ADBUSY); // Wait for conversion to complete
-		//Reset the timer
+		// Reset the timer
 		TL0=0; 
 		TH0=0;
 		while (Get_ADC()!=0); // Wait for the signal to be zero
@@ -180,15 +186,25 @@ void main (void)
 		while (Get_ADC()!=0); // Wait for the signal to be zero again
 		TR0=0; // Stop timer 0
 		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
-		//Time from the beginning of the sine wave to its peak
+
+		// Time from the beginning of the sine wave to its peak
 		overflow_count=65536-(half_period/2);
 
-	    // Read 14-bit value from the pins configured as analog inputs
-		v[0] = Volts_at_Pin(QFP32_MUX_P1_4);
-		v[1] = Volts_at_Pin(QFP32_MUX_P1_5);
-		v[2] = Volts_at_Pin(QFP32_MUX_P1_6);
-		v[3] = Volts_at_Pin(QFP32_MUX_P1_7);
-		printf ("V@P1.4=%7.5fV, V@P1.5=%7.5fV, V@P1.6=%7.5fV, V@P1.7=%7.5fV\r", v[0], v[1], v[2], v[3]);
+		// Calculate voltages and phase diff somehow
+		peak_sig1 = 0.0;
+		peak_sig2 = 0.0;
+		sig_diff = 0.0;
+
+		// Display values in PuTTY
+		printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
+	    printf("\rf=%fHz, V1=%fV(rms), V2=%fV(rms), phase=%fdeg", 1/(2*half_period), peak_sig1, peak_sig2, sig_diff);
+
+		// Display values on LCD
+		sprintf(display_text, "V1=%f, V2=%f", peak_sig1, peak_sig2);
+		LCDprint(display_text, 1, 1);
+		sprintf(display_text, "phase=%f", sig_diff);
+		LCDprint(display_text, 2, 1);
+
 		waitms(500);
 	 }  
 }	
