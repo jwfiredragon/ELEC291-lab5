@@ -16,6 +16,7 @@ unsigned char overflow_count;
 
 #define PIN_SIG1 QFP32_MUX_P1_4
 #define PIN_SIG2 QFP32_MUX_P1_5
+#define PIN_SIG3 QFP32_MUX_P1_6
 
 char _c51_external_startup (void)
 {
@@ -159,7 +160,6 @@ void main (void)
     waitms(500); // Give PuTTy a chance to start before sending
 	printf("\x1b[2J"); // Clear screen using ANSI escape sequence.
 	printf("\x1b[;f"); // Reset cursor position
-	
 	printf ("ADC test program\n"
 	        "File: %s\n"
 	        "Compiled: %s, %s\n\n",
@@ -173,55 +173,70 @@ void main (void)
 
 	while(1)
 	{
-		// Start tracking the reference signal
-		ADC0MX=QFP32_MUX_P1_7;
-		ADBUSY=1;
-		while (ADBUSY); // Wait for conversion to complete
-		// Reset the timer
+		// Reset the counter
 		TL0=0; 
 		TH0=0;
-		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for the signal to be zero
-		while (ADC_at_Pin(PIN_SIG1)==0);  // Wait for the signal to be positive
-		TR0=1; // Start the timer 0
-		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for the signal to be zero again
-		TR0=0; // Stop timer 0
-		half_period=TH0*256.0+TL0; // The 16-bit number [TH0-TL0]
+		TF0=0;
+		overflow_count=0;
+		
+		while(P0_1!=0); // Wait for the signal to be zero
+		while(P0_1!=1); // Wait for the signal to be one
+		TR0=1; // Start the timer
+		while(P0_1!=0) // Wait for the signal to be zero
+		{
+			if(TF0==1) // Did the 16-bit timer overflow?
+			{
+				TF0=0;
+				overflow_count++;
+			}
+		}
+		while(P0_1!=1) // Wait for the signal to be one
+		{
+			if(TF0==1) // Did the 16-bit timer overflow?
+			{
+				TF0=0;
+				overflow_count++;
+			}
+		}
+		TR0=0; // Stop timer 0, the 24-bit number [overflow_count-TH0-TL0] has the period!
+		half_period=(overflow_count*65536.0+TH0*256.0+TL0)*(12.0/SYSCLK)*1000;
 
-		// Time from the beginning of the sine wave to its peak
-		overflow_count=65536-(half_period/2);
+		// // Reset the timer
+		// TL0=0; 
+		// TH0=0;
+		// while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for next zero
+		// while (ADC_at_Pin(PIN_SIG1)==0); // Wait for positive
+		// TR0=1;
+		// waitms(half_period*500); // Wait for 1/4 period
+		// ADC_at_Pin(PIN_SIG1);
+		// peak_sig1 = Volts_at_Pin(PIN_SIG1); // record peak voltage for reference
 
-		// Reset the timer
-		TL0=0; 
-		TH0=0;
-		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for next zero
-		TR0=1;
-		while (TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
-		ADC_at_Pin(PIN_SIG1);
-		peak_sig1 = Volts_at_Pin(PIN_SIG1); // record peak voltage for reference
+		// while (ADC_at_Pin(PIN_SIG2)!=0); // Wait for zero of second signal
+		// while (ADC_at_Pin(PIN_SIG2)==0); // Wait for positive
+		// waitms(half_period*500); // Wait for 1/4 period
+		// TR0=0;
+		// sig_diff=(TH0*0x100+TL0);
+		// ADC_at_Pin(PIN_SIG2);
+		// peak_sig2 = Volts_at_Pin(PIN_SIG2); // record peak voltage for second signal
 
-		while (ADC_at_Pin(PIN_SIG2)!=0); // Wait for zero of second signal
-		sig_diff=TH0*256.0+TL0;
-		while (sig_diff+TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
-		TR0=0;
-		sig_diff=TH0*256.0+TL0;
-		ADC_at_Pin(PIN_SIG2);
-		peak_sig2 = Volts_at_Pin(PIN_SIG2); // record peak voltage for second signal
+		peak_sig1=0.0;
+		peak_sig2=0.0;
+		sig_diff=0.0;
 
-		peak_sig1 *= 0.7071; // Convert to RMS
-		peak_sig2 *= 0.7071;
-		sig_diff = (360*sig_diff)/(2*half_period); // calculate phase shift in degrees
+		//peak_sig1 *= 0.7071; // Convert to RMS
+		//peak_sig2 *= 0.7071;
+		//sig_diff = (360*sig_diff)/(2*half_period); // calculate phase shift in degrees
 
 		// Display values in PuTTY
 		printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
-	    printf("\rf=%fHz, V1=%fV(rms), V2=%fV(rms), phase=%fdeg", 1/(2*half_period), peak_sig1, peak_sig2, sig_diff);
+	    printf("\rf=%.4fHz, V1=%.4fV(rms), V2=%.4fV(rms), phase=%.4fdeg", half_period, peak_sig1, peak_sig2, sig_diff);
 
 		// Display values on LCD
-		sprintf(display_text, "V1=%f, V2=%f", peak_sig1, peak_sig2);
+		sprintf(display_text, "V1=%.3f, V2=%.3f", peak_sig1, peak_sig2);
 		LCDprint(display_text, 1, 1);
-		sprintf(display_text, "phase=%f", sig_diff);
+		sprintf(display_text, "phase=%.3f", sig_diff);
 		LCDprint(display_text, 2, 1);
 
 		waitms(500);
 	 }  
 }	
-
