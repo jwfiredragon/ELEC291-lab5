@@ -190,18 +190,22 @@ void main (void)
 		// Time from the beginning of the sine wave to its peak
 		overflow_count=65536-(half_period/2);
 
+		// Reset the timer
+		TL0=0; 
+		TH0=0;
 		while (ADC_at_Pin(PIN_SIG1)!=0); // Wait for next zero
+		TR0=1;
 		while (TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
 		ADC_at_Pin(PIN_SIG1);
 		peak_sig1 = Volts_at_Pin(PIN_SIG1); // record peak voltage for reference
 
 		while (ADC_at_Pin(PIN_SIG2)!=0); // Wait for zero of second signal
-		while (TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
+		sig_diff=TH0*256.0+TL0;
+		while (sig_diff+TH0*256.0+TL0<=half_period/2); // Wait for 1/4 period
+		TR0=0;
+		sig_diff=TH0*256.0+TL0;
 		ADC_at_Pin(PIN_SIG2);
 		peak_sig2 = Volts_at_Pin(PIN_SIG2); // record peak voltage for second signal
-		
-		// Measure time difference somehow? IDK
-		sig_diff = 0.0;
 
 		peak_sig1 *= 0.7071; // Convert to RMS
 		peak_sig2 *= 0.7071;
